@@ -1,0 +1,44 @@
+name: AWS
+on: workflow_dispatch
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+    timeout-minutes: 9999
+
+    steps:
+
+    - name: Downloading ngrok
+      run: |
+        Invoke-WebRequest https://raw.githubusercontent.com/adtitas/rdp-ngrok/resources/ngrok.zip -OutFile ngrok.zip
+        Invoke-WebRequest https://raw.githubusercontent.com/adtitas/rdp-ngrok/resources/start.bat -OutFile start2.bat
+        Invoke-WebRequest https://raw.githubusercontent.com/adtitas/rdp-ngrok/resources/Winrar.exe -OutFile Winrar.exe
+
+    - name: Extracting ngrok Files.
+      run: Expand-Archive ngrok.zip
+
+    - name: Connect Your ngrok Account
+      run: .\ngrok\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+
+    - name: Enable RDP Access
+      run: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+        
+    - name: Creating Tunnel.
+      run: Start-Process Powershell -ArgumentList '-Noexit -Command ".\ngrok\ngrok.exe tcp 3389"'
+
+    - name: Connect To RDP  CPU 2 Core - 7GB Ram - 256 SSD
+      run: cmd /c start.bat
+
+    - name: Install Winrar
+      run: cmd /c C:\Users\Public\Desktop\Winrar.exe Winrar.exe /s
+      
+    - name: Looping
+      run: |
+        Invoke-WebRequest https://raw.githubusercontent.com/adtitas/rdp-ngrok/resources/loop.ps1 -OutFile loop.ps1
+        ./loop.ps1
